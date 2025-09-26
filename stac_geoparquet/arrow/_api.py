@@ -131,7 +131,7 @@ def parse_stac_items_to_arrow(
             elif not schema.equals(batch.schema):
                 logger.info("Unifying schema...")
                 schema = pa.unify_schemas(
-                    schema, [batch.schema], promote_options="permissive"
+                    [schema, batch.schema], promote_options="permissive"
                 )
             fname = f"{tmpdir}/{cnt}.parquet"
             to_parquet(
