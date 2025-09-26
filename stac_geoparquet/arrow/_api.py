@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 import psutil
 import pyarrow as pa
+from pyarrow.dataset import dataset as pa_dataset
 import pystac
 
 from stac_geoparquet.arrow._batch import StacArrowBatch, StacJsonBatch
@@ -138,7 +139,7 @@ def parse_stac_items_to_arrow(
                 output_path=fname,
             )
             memlog(f"Batch {cnt}")
-        ds = pa.dataset.dataset(tmpdir, schema=schema, format="parquet")
+        ds = pa_dataset(tmpdir, schema=schema, format="parquet")
         memlog("Created Dataset")
         batches = ds.to_batches()
         memlog("Created Batches")
