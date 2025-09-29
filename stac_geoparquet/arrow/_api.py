@@ -134,8 +134,11 @@ def parse_stac_items_to_arrow(
                     [schema, batch.schema], promote_options="permissive"
                 )
             fname = f"{tmpdir}/{cnt}.parquet"
+            # Use batch.schema to not lie about the schema for each batch.
+            # later pa_dataset will conform to unified schema across the temp
+            # parquet files
             to_parquet(
-                pa.RecordBatchReader.from_batches(schema, [batch]),
+                pa.RecordBatchReader.from_batches(batch.schema, [batch]),
                 output_path=fname,
             )
             memlog(f"Batch {cnt}")
