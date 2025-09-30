@@ -144,7 +144,9 @@ def parse_stac_items_to_arrow(
             memlog(f"Batch {cnt}")
         ds = pa_dataset(tmpdir, schema=schema, format="parquet")
         memlog("Created Dataset")
-        batches = ds.to_batches()
+        batches = ds.to_batches(
+            batch_size=chunk_size
+        )
         memlog("Created Batches")
         return pa.RecordBatchReader.from_batches(schema, batches)
 
