@@ -122,30 +122,33 @@ def parse_stac_items_to_arrow(
         return from_batches(batches)
 
     else:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            logger.info(f"Using temporary directory {tmpdir} for chunked schema")
-            for cnt, chunk in enumerate(batched_iter(items, chunk_size)):
-                batch = stac_items_to_arrow(chunk)
-                if not isinstance(schema, pa.Schema):
-                    schema = batch.schema
-                elif not schema.equals(batch.schema):
-                    logger.info("Unifying schema...")
-                    schema = pa.unify_schemas(
-                        [schema, batch.schema], promote_options="permissive"
-                    )
-                fname = f"{tmpdir}/{cnt}.parquet"
-                to_parquet(
-                    pa.RecordBatchReader.from_batches(batch.schema, [batch]),
-                    output_path=fname,
+        if tmpdir is None:
+            raise Exception("Temp Directory Must Be Set When Using ChunksToDisk")
+        for cnt, chunk in enumerate(batched_iter(items, chunk_size)):
+            batch = stac_items_to_arrow(chunk)
+            if not isinstance(schema, pa.Schema):
+                schema = batch.schema
+            elif not schema.equals(batch.schema):
+                logger.info("Unifying schema...")
+                schema = pa.unify_schemas(
+                    [schema, batch.schema], promote_options="permissive"
                 )
-                memlog(f"Batch {cnt}")
-            ds = pa_dataset(tmpdir, schema=schema, format="parquet")
-            memlog("Created Dataset")
-            batches = ds.to_batches(
-                batch_size=chunk_size
+            fname = f"{tmpdir}/{cnt}.parquet"
+            # Use batch.schema to not lie about the schema for each batch.
+            # later pa_dataset will conform to unified schema across the temp
+            # parquet files
+            to_parquet(
+                pa.RecordBatchReader.from_batches(batch.schema, [batch]),
+                output_path=fname,
             )
-            memlog("Created Batches")
-            return pa.RecordBatchReader.from_batches(schema, batches)
+            memlog(f"Batch {cnt}")
+        ds = pa_dataset(tmpdir, schema=schema, format="parquet")
+        memlog("Created Dataset")
+        batches = ds.to_batches(
+            batch_size=chunk_size
+        )
+        memlog("Created Batches")
+        return pa.RecordBatchReader.from_batches(schema, batches)
 
 
 def parse_stac_items_to_parquet(
